@@ -1,5 +1,5 @@
 /*
-        Robot arm test script 1          Dec12        alan@alanesq.com
+        Robot arm test script 1          Dec12        
         Uses 2 servos on pins 10 and 11 to move a simple 2 dimensional robotic arm
         the arm is positioned by giving an x,y coordinate and via the gift of inverse kinematics 
         this is translated to the required servo angles.
