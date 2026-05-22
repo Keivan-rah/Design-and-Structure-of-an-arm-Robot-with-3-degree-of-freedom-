@@ -1,0 +1,30 @@
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  Serial1.begin(115200);
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  /*
+  if(Serial.available()){
+    Serial1.write(Serial.read());
+  }
+  //------------
+  if(Serial1.available()){
+    Serial.write(Serial1.read());
+  }
+  */
+  String myInputData;
+  int xCoordinate, yCoordinate;
+  if(Serial1.available()){
+    myInputData = Serial1.readStringUntil('\n');
+    int semicolonIndex = myInputData.indexOf(';');
+    String firstValue = myInputData.substring(0, semicolonIndex);
+    String secondValue = myInputData.substring(semicolonIndex + 1);
+    xCoordinate = firstValue.toInt();
+    yCoordinate = secondValue.toInt();
+    Serial.println(xCoordinate);
+  }
+}
