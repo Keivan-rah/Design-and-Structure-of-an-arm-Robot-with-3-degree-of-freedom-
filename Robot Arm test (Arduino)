@@ -1,0 +1,77 @@
+/*
+        Robot arm test script 1          Dec12        alan@alanesq.com
+        Uses 2 servos on pins 10 and 11 to move a simple 2 dimensional robotic arm
+        the arm is positioned by giving an x,y coordinate and via the gift of inverse kinematics 
+        this is translated to the required servo angles.
+*/
+#include <Servo.h>    // servo library
+#define l1 135    // Humerus length (mm)
+#define l2 125     // Ulna length (mm)
+// define servos
+Servo servoB;
+Servo servoS;  // shoulder servo
+Servo servoE;  // elbow servo
+
+// ***************************************************************************
+
+
+void setup() 
+{ 
+  servoB.attach(8);  // attaches the shoulder servo on pin 10
+  servoS.attach(8);  // attaches the shoulder servo on pin 10
+  servoE.attach(9);  // attaches the elbow servo on pin 11
+} 
+
+
+// ***************************************************************************
+
+
+void loop() 
+{ 
+
+  // set servo to park position
+       moveArm(100,50,0);
+  //  moveServos(90,45,0);
+} 
+// ***************************************************************************
+//  Move the arm to specified x,y position
+
+void moveArm ( float x, float y ,float Z)
+    {
+    float tvala = ( ( x * x ) + ( y * y ) -(l1*l1)-(l2*l2) );
+    float tvalb = 2.0 *l1 * l2;
+    float angleE = acos ( tvala / tvalb );
+    //sai = ( acos( (x^2+y^2+l1^2-l2^2)/(2*l1*sqrt(x^2+y^2)) ) )
+    float f1_a = ( ( x * x ) + ( y * y )+(l1*l1)-(l2*l2) );
+    float f1_b = sqrt ( ( x * x ) + ( y * y ) ); 
+    float sai = acos ( f1_a/2*l1*f1_b );
+    float beta = atan2 ( y , x );
+    //  theta1 = [ (beta - sai)  ; (beta + sai) ]
+    float angleS = ( beta - sai);
+    angleS = angleS * RAD_TO_DEG;
+    // convert angles from radians to degrees
+    angleE = angleE * RAD_TO_DEG;
+    moveServos(angleS,angleE);    // move the servos
+}
+// ***************************************************************************
+
+
+// Move serve adjusting inaccuracy in servo angles
+// i.e. when you tell a servo to go to 90 degrees, adjust it so it actually does
+void moveServos ( int s, int e ) 
+   {
+    // adjust shoulder servo
+    s = s * 0.9;
+    // adjust elbow servo
+    e = e * 0.8;
+    int theta1;
+    int theta2;
+    theta1=180-s;
+    theta2=s+e;
+   servoS.write(theta1);              // move shoulder servo 
+   servoE.write(theta2);
+    }
+
+
+// ***************************************************************************
+// end
