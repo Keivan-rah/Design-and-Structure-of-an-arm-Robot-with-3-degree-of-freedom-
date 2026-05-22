@@ -1,0 +1,216 @@
+#include <Wire.h>
+#include "Adafruit_TCS34725.h"
+//#include <Servo.h>    // servo library
+#include <VarSpeedServo.h>;
+
+#define ledb 2
+#define ledg 3
+#define ledr 4  
+#define EF 5  
+#define stp1 14 
+#define stp2 15 
+#define stp3 16
+#define stp4 17
+
+#define humerus 135    // Humerus length (mm)
+#define ulna 125       // Ulna length (mm)
+
+
+/* Initialise with default values (int time = 2.4ms, gain = 1x) */
+// Adafruit_TCS34725 tcs = Adafruit_TCS34725();
+/* Initialise with specific int time and gain values */
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_700MS, TCS34725_GAIN_1X);
+
+VarSpeedServo servoS;  // shoulder servo
+VarSpeedServo servoE;  // elbow servo
+VarSpeedServo servoB;
+
+int Xhand;            // X position of hand
+int Yhand;            // y position of hand
+// pre calculations
+float hum_sq = humerus * humerus;        // humurus length squared
+float uln_sq = ulna * ulna;              // ulna length squared
+// ***************************************************************************
+void setup() 
+{ 
+  //start serial connection
+
+
+   pinMode(ledb,OUTPUT);    //pin modes
+   pinMode(ledg,OUTPUT);
+   pinMode(ledr,OUTPUT); 
+   pinMode(EF,OUTPUT); 
+   pinMode(stp1,OUTPUT);   
+   pinMode(stp2,OUTPUT);
+   pinMode(stp3,OUTPUT);   
+   pinMode(stp4,OUTPUT);
+    
+  Serial.begin(9600);
+  Serial.println("Robot arm demo sketch");
+    if (tcs.begin()) {
+    Serial.println("Found sensor");
+  } else {
+    Serial.println("No TCS34725 found ... check your connections");
+    while (1);
+  }
+  servoS.attach(8);  // attaches the shoulder servo on pin 10
+  servoE.attach(9);  // attaches the elbow servo on pin 11
+  servoB.attach(10);
+} 
+
+
+// ***************************************************************************
+
+
+void loop() 
+{ 
+
+  // set servo to park position
+   servoS.write(160);              // move shoulder servo 
+   servoE.write(160);              // move elbow servo 
+  delay(3000);
+  // move around in a circle
+
+  while(1) {
+scan();
+
+  }
+//  // move arm along a straight line in 2cm steps
+//  for ( int i=80; i < 220; i = i + 20)  {
+//    moveArm ( i,100 );
+//    delay(2000);
+//  }
+} 
+
+
+// ***************************************************************************
+void scan(void) 
+{
+
+ float cstep = 6.283 /80;
+       int color=0;
+       int cit=0;
+digitalWrite(EF,LOW);
+      
+       moveArm(120,30,0);delay(1000);
+       delay(500);
+      color=colorcheck();
+      delay(500);
+      if(color==1){ digitalWrite(EF,HIGH);moveArm(120,30,100);delay(1000);moveArm(120,0,100);digitalWrite(EF,LOW);delay(1000);moveArm(120,30,100);;delay(1000);} 
+       delay(5000);
+//      delay(500);
+//       if(color==1){servoB.write(150,50,true);moveArm(100,50,true);delay(1000);}
+//       delay(500);
+//       if(color==2){servoB.write(45);moveArm(100,50);delay(1000);}
+//       delay(1000);
+
+
+//movez(180);
+//delay(10000);
+//movez(0);
+//delay(10000);
+
+
+
+//
+//          for ( float theta = 0; theta < 6.283; theta = theta + cstep)  {
+//        float pz = 90*cos(theta);
+//       servoB.write(pz);
+//       delay(300);
+//   }
+}
+//*********************************************************************************************************
+
+//  Move the arm to specified x,y position
+
+
+void moveArm ( float x, float y,float z) {
+
+    // calculate required servo angles using inverse kinematics 
+    Serial.println("Calculate servo angles:");
+    
+    float angleB =atan2 (y , z );
+    // Work out the length of an imaginery line from the arms shoulder to the x,y position and call it B
+    // using pythagoras theorem - length of b squared = x sqared + y squared
+    float B = sqrt ( ( x * x ) + ( y * y ) );
+    Serial.print("  B = ");     Serial.println( B );
+
+    // Calculate the angle of the imaginary line from the x axis and call it QA
+    float QA = atan2 ( y , x ); 
+    Serial.print("  QA = ");     Serial.println( QA );
+
+    // Calculate the angle from the imaginary line to the humerus (using cosine rule) and call it QB
+    float B_sq = B * B;    // B squared
+    float tvala = hum_sq - uln_sq + B_sq ;
+    float tvalb = 2.0 * humerus * B;
+    float QB = acos ( tvala / tvalb ); 
+    Serial.print("  QB = ");     Serial.println( QB );
+    
+    float angleS = QA + QB;
+    Serial.print("  angleS = ");     Serial.println( angleS );
+    tvala = hum_sq + uln_sq - B_sq ;
+    tvalb = 2.0 * humerus * ulna;
+    float angleE = acos ( tvala / tvalb ); 
+    Serial.print("  angleE = ");     Serial.println( angleE );
+    
+    
+    // convert angles from radians to degrees
+    angleE = angleE * RAD_TO_DEG;
+    angleS = angleS * RAD_TO_DEG;
+    angleB = angleB * RAD_TO_DEG;
+    
+
+    Serial.print("moving arm to x=");  Serial.print(x);  Serial.print(" Y=");  Serial.println(y);
+    Serial.print("  angleS in degrees = ");     Serial.println( angleS );
+    Serial.print("  angleE in degrees = ");     Serial.println( angleE );
+    Serial.print("  angleB in degrees = ");     Serial.println( angleB );
+    moveServos(angleS,angleE,angleB);    // move the servos
+  
+}
+
+
+// ***************************************************************************
+// Move serve adjusting inaccuracy in servo angles
+// i.e. when you tell a servo to go to 90 degrees, adjust it so it actually does
+void moveServos ( int s, int e ,int b ) 
+{
+    // adjust shoulder servo
+   // s = s * 0.9;
+    // adjust elbow servo
+   // e = e * 0.8;
+int  th1=180-s;
+int  th2=s+e;
+int th3=b;
+   
+   servoS.write(th1,50,true);   
+   servoE.write(th2,50,true);  
+  servoB.write(th3,50,true); 
+  
+}
+
+//---------------------------------------------------------------------------------------------------------
+//----------------------------------   color read    ------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------
+int colorcheck() 
+{
+  uint16_t r, g, b, c, colorTemp, lux;
+  tcs.getRawData(&r, &g, &b, &c);
+  colorTemp = tcs.calculateColorTemperature(r, g, b);
+  lux = tcs.calculateLux(r, g, b);
+  if ((r>50) && (g>50) && (b>50)){
+  if ((r>g) && (g>b)) {digitalWrite(ledr,HIGH);digitalWrite(ledb,LOW);digitalWrite(ledg,LOW);return 1;}
+  if ((r>b) && (b>g)) {digitalWrite(ledr,HIGH);digitalWrite(ledb,LOW);digitalWrite(ledg,LOW);return 1;}
+  if ((g>b) && (b>r)) {digitalWrite(ledg,HIGH); digitalWrite(ledb,LOW);digitalWrite(ledr,LOW);return 2;}
+  if ((g>r) && (r>b)) {digitalWrite(ledg,HIGH); digitalWrite(ledb,LOW);digitalWrite(ledr,LOW);return 2;}
+  if ((b>r) && (r>g)) {digitalWrite(ledb,HIGH);digitalWrite(ledr,LOW);digitalWrite(ledg,LOW);return 3;}
+  if ((b>g) && (g>r)) {digitalWrite(ledb,HIGH);digitalWrite(ledr,LOW);digitalWrite(ledg,LOW);return 3;}
+  }
+ 
+  Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
+  Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
+  Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
+  Serial.print("G: "); Serial.print(g, DEC); Serial.print(" ");
+  Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
+  Serial.print("C: "); Serial.print(c, DEC); Serial.print(" ");
+  Serial.println(" ");
+}
